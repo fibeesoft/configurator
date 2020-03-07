@@ -13,7 +13,15 @@ public class MenuCreator : MonoBehaviour
     [SerializeField] GameObject listElementsContainer;
     MenuElement[] mainMenuArray, engineMenuArray, colorMenuArray, wheelsMenuArray, lightsMenuArray, audioMenuArray;
     MenuElement[][] submenuJaggedArray;
-    
+    [SerializeField] Color32[] bodyColor;
+    [SerializeField] Material bodyMaterial;
+    [SerializeField] GridLayoutGroup gridSubmenu;
+    [SerializeField] GameObject[] wheelsArray;
+    [SerializeField] GameObject[] lightsArray;
+    [SerializeField] GameObject emailConfirmPanel;
+    string[] choosenOptions;
+    GameObject[] mainMenuButtons;
+
     float totalPrice, basePrice;
     float[] priceArray;
 
@@ -21,11 +29,13 @@ public class MenuCreator : MonoBehaviour
     {
         basePrice = 49000f;
         CreateMainMenu();
+        
     }
 
 
     void CreateMainMenu()
     {
+
         subMenu.SetActive(false);
         mainMenuArray = new MenuElement[]
         {
@@ -35,6 +45,8 @@ public class MenuCreator : MonoBehaviour
             new MenuElement("LIGHTS"),
             new MenuElement("AUDIO")
         };
+
+        choosenOptions = new string[mainMenuArray.Length];
 
         priceArray = new float[mainMenuArray.Length];
 
@@ -47,25 +59,23 @@ public class MenuCreator : MonoBehaviour
             if (i != 0 && i != mainMenuArray.Length + 1)
             {
                 txtElements[0].text = mainMenuArray[i - 1].ElementName;
+               
             }
             else if(i == 0)
             {
                 txtElements[0].text = "CAR";
-                txtElements[1].text = "Toyota Yaris";
-                txtElements[2].text = basePrice + "$";
+                txtElements[1].text = "Manufacturer & model";
+                txtElements[2].text = basePrice.ToString();
             }
             else
             {
                 txtElements[0].text = "TOTAL";
                 CalculateTotalPrice();
-                txtElements[2].text = totalPrice + "$";
-
-
+                txtElements[2].text = totalPrice.ToString();
             }
-
         }
 
-
+        // create main menu buttons
         for (int i = 0; i < mainMenuArray.Length; i++)
         {
             Button btn = Instantiate(btnPrefab as Button);
@@ -73,11 +83,22 @@ public class MenuCreator : MonoBehaviour
             btn.GetComponentInChildren<Text>().text = mainMenuArray[i].ElementName;
             int tempi = i;
             btn.onClick.AddListener(()=> CreateSubMenu(tempi));
+            btn.transform.tag = "MenuButton";
+
+        }
+    }
+
+    void UpdateMainMenuButtons()
+    {
+        mainMenuButtons = GameObject.FindGameObjectsWithTag("MenuButton");
+        for(var i = 0; i < mainMenuButtons.Length; i++)
+        if (choosenOptions[i] != null)
+        {
+            mainMenuButtons[i].GetComponent<Image>().color = new Color32(120, 220, 120, 255);
         }
     }
     void CreateSubMenu(int menuNumber)
     {
-
         engineMenuArray = new MenuElement[]
         {
             new MenuElement("1.2 fsi 110KM", 0),
@@ -148,6 +169,7 @@ public class MenuCreator : MonoBehaviour
         btnBack.GetComponentInChildren<Text>().text = "<< BACK";
         btnBack.onClick.AddListener(() => OpenMainMenu());
 
+            gridSubmenu.cellSize = new Vector2(1920f/ (submenuJaggedArray[menuNumber].Length + 1), 200f);
         // Create submenu buttons
         for (int i = 0; i < submenuJaggedArray[menuNumber].Length; i++)
         {
@@ -159,12 +181,14 @@ public class MenuCreator : MonoBehaviour
             int tempi = i;
             float tempprice = submenuJaggedArray[menuNumber][i].Price;
             btn.onClick.AddListener(() => SetChoosenOption(menuNumber,tempi, tempprice));
+            //btn.GetComponent<RectTransform>().sizeDelta = new Vector2(200f, 200f);
         }
     }
 
     void OpenMainMenu()
     {
         subMenu.SetActive(false);
+        UpdateMainMenuButtons();
     }
     void SetChoosenOption(int menuNumber, int tempOption, float price)
     {
@@ -181,6 +205,32 @@ public class MenuCreator : MonoBehaviour
         totalPrice = priceArray.Sum() + basePrice;
     }
 
+    void PrepareListOfElements()
+    {
+        string list = "";
+        for(int i = 0; i < choosenOptions.Length; i++)
+        {
+            list += mainMenuArray[i].ElementName + ": " + choosenOptions[i] + "\n\n";
+        }
+
+        list += "\nTOTAL PRICE: " + totalPrice;
+        print(list);
+        StartCoroutine(DisplayConfirmEmailPanel(list));
+    }
+
+    public void SendToEmail()
+    {
+        PrepareListOfElements();
+    }
+
+    IEnumerator DisplayConfirmEmailPanel(string listElements)
+    {
+        emailConfirmPanel.SetActive(true);
+        emailConfirmPanel.GetComponentInChildren<Text>().text = listElements;
+        yield return new WaitForSeconds(2);
+        emailConfirmPanel.SetActive(false);
+
+    }
     void UpdateElement(int menuNumber, int tempOption)
     {
         GameObject[] elementsList = GameObject.FindGameObjectsWithTag("ListElement");
@@ -189,7 +239,7 @@ public class MenuCreator : MonoBehaviour
         txtElement[0].text = mainMenuArray[menuNumber].ElementName;
         txtElement[1].text = submenuJaggedArray[menuNumber][tempOption].Description;
         txtElement[2].text = submenuJaggedArray[menuNumber][tempOption].Price.ToString();
-        
+        choosenOptions[menuNumber] = submenuJaggedArray[menuNumber][tempOption].Description;
 
         Text[] txtTotalArray = elementsList[elementsList.Length - 1].GetComponentsInChildren<Text>();
         txtTotalArray[0].text = "TOTAL";
@@ -200,5 +250,43 @@ public class MenuCreator : MonoBehaviour
         txtBaseArray[0].text = "CAR";
         txtBaseArray[1].text = "Manufacturer & model";
         txtBaseArray[2].text = basePrice.ToString();
+
+        if(menuNumber == 1)
+        {
+            bodyMaterial.color = bodyColor[tempOption];
+        }
+
+        if(menuNumber == 2)
+        {
+            foreach(var wheel in wheelsArray)
+            {
+                wheel.SetActive(false);
+            }
+            wheelsArray[tempOption].SetActive(true);
+        }
+
+        if (menuNumber == 3)
+        {
+            print(menuNumber + ", " + tempOption);
+            foreach (var light in lightsArray)
+            {
+                light.SetActive(false);
+            }
+            if (tempOption == 0)
+            {
+                lightsArray[0].SetActive(true);
+            }
+            else if (tempOption == 1)
+            {
+                lightsArray[0].SetActive(true);
+                lightsArray[1].SetActive(true);
+            }
+            else
+            {
+                lightsArray[1].SetActive(true);
+                lightsArray[2].SetActive(true);
+            }
+        }
     }
+
 }

@@ -6,6 +6,7 @@ TagManager:
   tags:
   - SubmenuElement
   - ListElement
+  - MenuButton
   layers:
   - Default
   - TransparentFX
